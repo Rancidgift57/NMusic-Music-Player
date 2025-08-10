@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NMusic Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1DB954">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .bg-custom-gray { background-color: #121212; }
+        .bg-custom-light-gray { background-color: #181818; }
+        .bg-custom-card { background-color: #282828; }
+        .text-custom-gray { color: #b3b3b3; }
+
+        /* Custom scrollbar for a cleaner look */
+        .queue-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .queue-list::-webkit-scrollbar-track {
+            background: #181818;
+        }
+        .queue-list::-webkit-scrollbar-thumb {
+            background: #535353;
+            border-radius: 3px;
+        }
+        .queue-list::-webkit-scrollbar-thumb:hover {
+            background: #6b6b6b;
+        }
+        
+        /* For the ghost element during drag */
+        .sortable-ghost {
+            background: #3a3a3a;
+            opacity: 0.5;
+        }
+        .sortable-chosen {
+            background: #3a3a3a;
+        }
+    </style>
+</head>
+<body class="bg-custom-gray text-white antialiased">
+
+    <div class="container mx-auto max-w-md h-screen flex flex-col p-4 space-y-4 bg-custom-light-gray">
+
+        <!-- API Status Message -->
+        <div id="api-status" class="text-center text-red-400 text-sm p-2 rounded-lg bg-red-500/10 hidden"></div>
+
+        <!-- Now Playing Section -->
+        <div class="flex-shrink-0 bg-custom-card p-6 rounded-xl shadow-lg space-y-4">
+            <div class="text-center">
+                <h2 class="text-sm text-custom-gray uppercase tracking-wider">Now Playing</h2>
+                <p id="now-playing-song" class="text-xl font-bold truncate">No Song Selected</p>
+                <p id="now-playing-artist" class="text-md text-custom-gray">---</p>
+            </div>
+            
+            <!-- Album Art Placeholder -->
+            <div class="aspect-square bg-gray-700 rounded-lg flex items-center justify-center shadow-md">
+                 <i class="fa-solid fa-music text-6xl text-gray-500"></i>
+            </div>
+
+            <!-- Progress Bar -->
+            <div>
+                <div id="progress-bar-container" class="bg-gray-600 rounded-full h-1.5 cursor-pointer">
+                    <div id="progress-bar" class="bg-green-500 h-1.5 rounded-full w-0"></div>
+                </div>
+                <div class="flex justify-between text-xs text-custom-gray mt-1">
+                    <span id="current-time">0:00</span>
+                    <span id="total-time">0:00</span>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex justify-center items-center space-x-8">
+                <button id="prev-btn" class="text-2xl text-custom-gray hover:text-white transition-colors"><i class="fas fa-backward-step"></i></button>
+                <button id="play-pause-btn" class="bg-green-500 text-black w-16 h-16 rounded-full flex items-center justify-center text-3xl shadow-lg transform hover:scale-105 transition-transform">
+                    <i id="play-pause-icon" class="fas fa-play"></i>
+                </button>
+                <button id="next-btn" class="text-2xl text-custom-gray hover:text-white transition-colors"><i class="fas fa-forward-step"></i></button>
+            </div>
+        </div>
+
+        <!-- Queue Section -->
+        <div class="flex-grow flex flex-col bg-custom-card rounded-xl shadow-lg overflow-hidden">
+             <div class="p-4 flex justify-between items-center border-b border-gray-700">
+                <h3 class="font-semibold">Up Next</h3>
+                <button id="clear-queue-btn" class="text-sm text-custom-gray hover:text-red-500 transition-colors">Clear All</button>
+            </div>
+            <div id="queue-list" class="queue-list flex-grow overflow-y-auto p-2 space-y-2">
+                <!-- Queue items will be injected here by JavaScript -->
+                <div id="empty-queue-message" class="text-center text-custom-gray p-8">Your queue is empty.</div>
+            </div>
+        </div>
+        
+        <!-- Add Song Section -->
+        <div class="flex-shrink-0">
+            <form id="add-song-form" class="flex space-x-2">
+                <input type="text" id="song-name-input" class="flex-grow bg-custom-card border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Enter a song name to add" required>
+                <button type="submit" class="bg-green-500 text-black font-bold px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"><i class="fas fa-plus"></i> Add</button>
+            </form>
+        </div>
+    </div>
+
+    <audio id="audio-player" class="hidden"></audio>
+
+    <!-- SortableJS for drag-and-drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+    <script>
+        // All your existing app logic goes here...
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CONFIGURATION ---
+            const API_BASE_URL = 'https://nmusic.onrender.com';
+
+            // --- DOM ELEMENTS ---
+            const apiStatusEl = document.getElementById('api-status');
+            const audioPlayer = document.getElementById('audio-player');
+            const playPauseBtn = document.getElementById('play-pause-btn');
+            const playPauseIcon = document.getElementById('play-pause-icon');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const progressBar = document.getElementById('progress-bar');
+            const progressBarContainer = document.getElementById('progress-bar-container');
+            const currentTimeEl = document.getElementById('current-time');
+            const totalTimeEl = document.getElementById('total-time');
+            const nowPlayingSongEl = document.getElementById('now-playing-song');
+            
+            const queueListEl = document.getElementById('queue-list');
+            const emptyQueueMessage = document.getElementById('empty-queue-message');
+            const addSongForm = document.getElementById('add-song-form');
+            const songNameInput = document.getElementById('song-name-input');
+            const clearQueueBtn = document.getElementById('clear-queue-btn');
+
+            // --- STATE ---
+            let currentQueue = [];
+            let currentSongIndex = -1;
+            let isPlaying = false;
+            let sortableInstance = null;
+
+            // --- API FUNCTIONS ---
+            const api = {
+                getQueue: async () => {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/queue`);
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        apiStatusEl.classList.add('hidden');
+                        return await response.json();
+                    } catch (error) {
+                        console.error('Failed to get queue:', error);
+                        apiStatusEl.textContent = 'API Connection Error. Check server CORS settings.';
+                        apiStatusEl.classList.remove('hidden');
+                        return { queue: [] };
+                    }
+                },
+                addSong: async (songName) => {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/queue/add`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: songName })
+                        });
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        return await response.json();
+                    } catch (error) {
+                        console.error('Failed to add song:', error);
+                    }
+                },
+                removeSong: async (songId) => {
+                     try {
+                        const response = await fetch(`${API_BASE_URL}/queue/${songId}`, { method: 'DELETE' });
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        return await response.json();
+                    } catch (error) {
+                        console.error('Failed to remove song:', error);
+                    }
+                },
+                clearQueue: async () => {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/queue/clear`, { method: 'POST' });
+                         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        return await response.json();
+                    } catch (error) {
+                        console.error('Failed to clear queue:', error);
+                    }
+                },
+                reorderQueue: async (orderedIds) => {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/queue/reorder`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ order: orderedIds })
+                        });
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        return await response.json();
+                    } catch (error) {
+                        console.error('Failed to reorder queue:', error);
+                    }
+                }
+            };
+
+            // --- UI RENDERING ---
+            const renderQueue = () => {
+                queueListEl.innerHTML = '';
+                if (currentQueue.length === 0) {
+                    emptyQueueMessage.classList.remove('hidden');
+                } else {
+                    emptyQueueMessage.classList.add('hidden');
+                    currentQueue.forEach((song, index) => {
+                        const isCurrentSong = index === currentSongIndex;
+                        const li = document.createElement('div');
+                        li.className = `flex items-center p-3 rounded-lg transition-colors ${isCurrentSong ? 'bg-green-500/20' : 'hover:bg-gray-700'}`;
+                        li.dataset.songId = song.id;
+                        li.dataset.songName = song.name;
+                        li.dataset.index = index;
+
+                        li.innerHTML = `
+                            <div class="flex-grow flex items-center space-x-3 cursor-pointer play-song-trigger">
+                                ${isCurrentSong && isPlaying ? '<i class="fas fa-volume-up text-green-400"></i>' : '<i class="fas fa-music text-custom-gray"></i>'}
+                                <span class="font-medium truncate">${song.name}</span>
+                            </div>
+                            <button class="remove-song-btn text-custom-gray hover:text-red-500 text-sm" data-song-id="${song.id}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        `;
+                        queueListEl.appendChild(li);
+                    });
+                }
+                
+                document.querySelectorAll('.play-song-trigger').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const songElement = e.currentTarget.closest('[data-index]');
+                        if (songElement) {
+                            playSongByIndex(parseInt(songElement.dataset.index, 10));
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.remove-song-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        handleRemoveSong(btn.dataset.songId);
+                    });
+                });
+            };
+
+            const updateNowPlayingUI = (songName) => {
+                nowPlayingSongEl.textContent = songName || 'No Song Selected';
+            };
+            
+            const formatTime = (seconds) => {
+                if (isNaN(seconds)) return '0:00';
+                const minutes = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+            };
+
+            // --- PLAYER LOGIC ---
+            const playSongByIndex = (index) => {
+                if (index < 0 || index >= currentQueue.length) return;
+                
+                currentSongIndex = index;
+                const song = currentQueue[index];
+                
+                audioPlayer.src = `${API_BASE_URL}/play/${encodeURIComponent(song.name)}`;
+                audioPlayer.play();
+                
+                updateNowPlayingUI(song.name);
+            };
+
+            const togglePlayPause = () => {
+                if (currentSongIndex === -1 && currentQueue.length > 0) {
+                    playSongByIndex(0);
+                    return;
+                }
+                if (audioPlayer.src) {
+                    if (isPlaying) {
+                        audioPlayer.pause();
+                    } else {
+                        audioPlayer.play();
+                    }
+                }
+            };
+            
+            const playNext = () => {
+                let nextIndex = currentSongIndex + 1;
+                if (nextIndex >= currentQueue.length) {
+                    nextIndex = 0;
+                }
+                playSongByIndex(nextIndex);
+            };
+            
+            const playPrev = () => {
+                let prevIndex = currentSongIndex - 1;
+                if (prevIndex < 0) {
+                    prevIndex = currentQueue.length - 1;
+                }
+                playSongByIndex(prevIndex);
+            };
+
+            // --- EVENT HANDLERS ---
+            const handleAddSong = async (e) => {
+                e.preventDefault();
+                const songName = songNameInput.value.trim();
+                if (songName) {
+                    await api.addSong(songName);
+                    songNameInput.value = '';
+                    await refreshQueue();
+                }
+            };
+
+            const handleRemoveSong = async (songId) => {
+                await api.removeSong(songId);
+                if (currentSongIndex !== -1 && currentQueue[currentSongIndex]?.id === songId) {
+                    audioPlayer.pause();
+                    audioPlayer.src = '';
+                    updateNowPlayingUI(null);
+                }
+                await refreshQueue();
+            };
+            
+            const handleClearQueue = async () => {
+                await api.clearQueue();
+                audioPlayer.pause();
+                audioPlayer.src = '';
+                updateNowPlayingUI(null);
+                await refreshQueue();
+            };
+            
+            // --- INITIALIZATION ---
+            const refreshQueue = async () => {
+                const lastPlayingId = currentSongIndex > -1 ? currentQueue[currentSongIndex]?.id : null;
+                
+                const queueData = await api.getQueue();
+                currentQueue = queueData.queue || [];
+
+                if (lastPlayingId) {
+                    const newIndex = currentQueue.findIndex(song => song.id === lastPlayingId);
+                    currentSongIndex = newIndex;
+                } else {
+                     currentSongIndex = -1;
+                }
+                
+                if (!isPlaying && currentSongIndex === -1) {
+                    updateNowPlayingUI(null);
+                    playPauseIcon.className = 'fas fa-play';
+                }
+
+                renderQueue();
+            };
+            
+            const initSortable = () => {
+                if (sortableInstance) {
+                    sortableInstance.destroy();
+                }
+                sortableInstance = new Sortable(queueListEl, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: async (evt) => {
+                        const orderedIds = Array.from(queueListEl.children).map(child => child.dataset.songId);
+                        await api.reorderQueue(orderedIds);
+                        await refreshQueue();
+                    },
+                });
+            };
+
+            const init = async () => {
+                audioPlayer.addEventListener('play', () => {
+                    isPlaying = true;
+                    playPauseIcon.className = 'fas fa-pause';
+                    renderQueue();
+                });
+                audioPlayer.addEventListener('pause', () => {
+                    isPlaying = false;
+                    playPauseIcon.className = 'fas fa-play';
+                    renderQueue();
+                });
+                audioPlayer.addEventListener('ended', playNext);
+                audioPlayer.addEventListener('timeupdate', () => {
+                    if (audioPlayer.duration) {
+                        progressBar.style.width = `${(audioPlayer.currentTime / audioPlayer.duration) * 100}%`;
+                        currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+                    }
+                });
+                audioPlayer.addEventListener('loadedmetadata', () => {
+                    totalTimeEl.textContent = formatTime(audioPlayer.duration);
+                });
+                
+                playPauseBtn.addEventListener('click', togglePlayPause);
+                nextBtn.addEventListener('click', playNext);
+                prevBtn.addEventListener('click', playPrev);
+
+                addSongForm.addEventListener('submit', handleAddSong);
+                clearQueueBtn.addEventListener('click', handleClearQueue);
+                
+                progressBarContainer.addEventListener('click', (e) => {
+                    if (audioPlayer.duration) {
+                        const rect = progressBarContainer.getBoundingClientRect();
+                        audioPlayer.currentTime = (e.clientX - rect.left) / rect.width * audioPlayer.duration;
+                    }
+                });
+
+                await refreshQueue();
+                initSortable();
+            };
+
+            init();
+        });
+    </script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
