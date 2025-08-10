@@ -1,6 +1,7 @@
 # NMusic - A Music Player
 
 NMusic is a complete music streaming solution featuring a modern, installable Progressive Web App (PWA) for listening, a robust backend API for serving audio and managing queues, and a simple utility for populating the music database.
+<img width="529" height="789" alt="image" src="https://github.com/user-attachments/assets/360e143a-5466-4ade-9752-42690a282cc9" />
 
 ## Features
 
