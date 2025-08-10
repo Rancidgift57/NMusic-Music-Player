@@ -50,7 +50,7 @@ The project is divided into several key components that work together:
 ├── templates/              # HTML templates for the Flask database uploader
 │   └── ...
 ├── app.py                  # Flask app for adding songs to the database
-├── player.py               # Command-line Python music player
+├── NmusicVer1.2.py               # Command-line Python music player
 └── README.md               # This file
 ```
 
