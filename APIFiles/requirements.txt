@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+yt-dlp
+libsql
+youtube-search-python
