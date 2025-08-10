@@ -154,3 +154,21 @@ The frontend is a static site located in `WebAppFiles`.
 - Ensure the `NmusicVer1.2.py` script is configured with the correct API URL.
 - Run the script from your terminal: `python NmusicVer1.2.py`
 - Follow the on-screen prompts to play music.
+
+ **Contributing**
+ - We welcome contributions to NMusic! To contribute, please follow these steps:
+ - Fork the Repository: Create a fork of the NMusic repository on your GitHub account.
+ - Clone the Fork: Clone your forked repository to your local machine.
+ - Create a Branch: Create a new branch for your feature or bug fix (git checkout -b feature/your-feature-name).
+ - Make Changes: Implement your changes, ensuring to follow the existing code style and include tests where applicable.
+ - Commit Changes: Commit your changes with a clear and descriptive commit message.
+ - Push to GitHub: Push your branch to your forked repository (git push origin feature/your-feature-name).
+ - Create a Pull Request: Open a pull request against the main repository's main branch, providing a detailed description of your changes.
+
+Please ensure your code adheres to the project's coding standards and includes appropriate documentation. For major changes, open an issue first to discuss your proposed changes.
+
+**Contact**
+For questions, suggestions, or support, please reach out to the NMusic team:
+Email: nnair7598@gmail.com
+
+We appreciate your feedback and are here to help!
