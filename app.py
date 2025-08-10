@@ -13,11 +13,11 @@ app = Flask(__name__,template_folder="templates")
 
 # Hardcoded credentials for authentication
 USERNAME = "admin"
-PASSWORD = "nikhil123"
+PASSWORD = "secret123"
 
 # Database configuration
-TURSO_DB_URL = "libsql://nmusic-nickocracker.aws-ap-south-1.turso.io"
-TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJleHAiOjE3NjIzNTcwODUsImlhdCI6MTc1NDU4MTA4NSwiaWQiOiIyYzdmYzNmNi1hMGIwLTQxYWQtOTg0OS04M2Y3ODdkNmJjNzgiLCJyaWQiOiI4ZDRjY2FjMi1hZmM2LTQzYjItOWUwMS05NmY1YTNmMjE4MTUifQ.ywoSztW44QEIUYsmWyL60gCmRDuftLDiRKu5wTymG-t5pQxFd_8VrVEytVxwz2kbnkj_klSEOQBpbPY090BNBg"
+TURSO_DB_URL = ""
+TURSO_AUTH_TOKEN = ""
 
 # Authentication decorator
 def check_auth(username, password):
