@@ -7,8 +7,8 @@ from youtubesearchpython import VideosSearch
 import pygame
 
 # --- TURSO DATABASE CONFIGURATION ---
-TURSO_DB_URL = os.environ.get("TURSO_DB_URL", "libsql://nmusic-nickocracker.aws-ap-south-1.turso.io")
-TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJleHAiOjE3NjIwMDM3NTQsImlhdCI6MTc1NDIyNzc1NCwiaWQiOiIyYzdmYzNmNi1hMGIwLTQxYWQtOTg0OS04M2Y3ODdkNmJjNzgiLCJyaWQiOiI4ZDRjY2FjMi1hZmM2LTQzYjItOWUwMS05NmY1YTNmMjE4MTUifQ.o_gKmY40zuOgy6nS_nNQXV6AJDbujyaBXKM2sR1e-kgAhZl3KAkUWJesBXDeNdS2EdWsqHwsXInG6wc081PVDg")
+TURSO_DB_URL = os.environ.get("TURSO_DB_URL", "")
+TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "")
 
 
 def fetch_and_play_audio(query):
