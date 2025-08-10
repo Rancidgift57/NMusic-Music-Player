@@ -168,7 +168,8 @@ The frontend is a static site located in `WebAppFiles`.
 Please ensure your code adheres to the project's coding standards and includes appropriate documentation. For major changes, open an issue first to discuss your proposed changes.
 
 **Contact**
-For questions, suggestions, or support, please reach out to the NMusic team:
-Email: nnair7598@gmail.com
+ - For questions, suggestions, or support, please reach out to the NMusic team:
+ - Email: nnair7598@gmail.com
 
-We appreciate your feedback and are here to help!
+
+### We appreciate your feedback and are here to help!
