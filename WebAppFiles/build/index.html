@@ -7,9 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- PWA Manifest Link -->
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#1DB954"> 
+    <!-- PWA Manifest (Embedded) -->
+    <link rel="manifest" href="data:application/manifest+json;base64,ew0KICAgICJuYW1lIjogIk5NdXNpYyBQbGF5ZXIiLA0KICAgICJzaG9ydF9uYW1lIjogIk5NdXNpYyIsDQogICAgImRlc2NyaXB0aW9uIjogIkEgc2ltcGxlIG11c2ljIHBsYXllciB3ZWIgYXBwbGljYXRpb24uIiwNCiAgICAic3RhcnRfdXJsIjogIi8iLA0KICAgICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLA0KICAgICJCYWNrZ3JvdW5kX2NvbG9yIjogIiMxMjEyMTIiLA0KICAgICJ0aGVtZV9jb2xvciI6ICIjMURCOTU0IiwNCiAgICAiaWNvbnMiOiBbDQogICAgICAgIHsNCiAgICAgICAgICAic3JjIjogImh0dHBzOi8vcGxhY2Vob2xkLmNvLzE5MngxOTIvMURCOTU0L0ZGRkZGRj90ZXh0PU5NIiwNCiAgICAgICAgICAidHlwZSI6ICJpbWFnZS9wbmciLA0KICAgICAgICAgICJzaXplcyI6ICIxOTJ4MTkyIg0KICAgICAgICB9LA0KICAgICAgICB7DQogICAgICAgICAgInNyYyI6ICJodHRwczovL3BsYWNlaG9sZC5jby81MTJ4NTEyLzFEQjk1NC9GRkZGRkY/dGV4dD1OTSIiwNCiAgICAgICAgICAidHlwZSI6ICJpbWFnZS9wbmciLA0KICAgICAgICAgICJzaXplcyI6ICI1MTJ4NTEyIg0KICAgICAgICB9DQogICAgXQ0KICB9">
+    <meta name="theme-color" content="#1DB954">
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -22,57 +22,37 @@
         .bg-custom-card { background-color: #282828; }
         .text-custom-gray { color: #b3b3b3; }
 
-        /* Custom scrollbar for a cleaner look */
-        .queue-list::-webkit-scrollbar {
-            width: 6px;
-        }
-        .queue-list::-webkit-scrollbar-track {
-            background: #181818;
-        }
-        .queue-list::-webkit-scrollbar-thumb {
-            background: #535353;
-            border-radius: 3px;
-        }
-        .queue-list::-webkit-scrollbar-thumb:hover {
-            background: #6b6b6b;
-        }
+        .list-scrollbar::-webkit-scrollbar { width: 6px; }
+        .list-scrollbar::-webkit-scrollbar-track { background: #181818; }
+        .list-scrollbar::-webkit-scrollbar-thumb { background: #535353; border-radius: 3px; }
+        .list-scrollbar::-webkit-scrollbar-thumb:hover { background: #6b6b6b; }
         
-        /* For the ghost element during drag */
-        .sortable-ghost {
-            background: #3a3a3a;
-            opacity: 0.5;
-        }
-        .sortable-chosen {
-            background: #3a3a3a;
-        }
+        .sortable-ghost { background: #3a3a3a; opacity: 0.5; border-radius: 0.5rem; }
+        .sortable-chosen { background: #3a3a3a; border-radius: 0.5rem; }
 
-        /* Modal transition */
-        #queue-modal-content {
-            transition: transform 0.3s ease-out;
-        }
+        .modal-content { transition: transform 0.3s ease-out; }
     </style>
 </head>
 <body class="bg-custom-gray text-white antialiased overflow-hidden">
 
     <div class="container mx-auto max-w-md h-screen flex flex-col p-4 space-y-4 bg-custom-light-gray">
 
-        <!-- API Status Message -->
         <div id="api-status" class="text-center text-red-400 text-sm p-2 rounded-lg bg-red-500/10 hidden"></div>
 
-        <!-- Main Player View (takes up most of the screen) -->
         <div class="flex-grow flex flex-col justify-center bg-custom-card p-6 rounded-xl shadow-lg space-y-4">
             <div class="text-center">
                 <h2 class="text-sm text-custom-gray uppercase tracking-wider">Now Playing</h2>
                 <p id="now-playing-song" class="text-xl font-bold truncate">No Song Selected</p>
-                <p id="now-playing-artist" class="text-md text-custom-gray">---</p>
-            </div>
-            
-            <!-- Album Art Placeholder -->
-            <div class="aspect-square bg-gray-700 rounded-lg flex items-center justify-center shadow-md">
-                 <i class="fa-solid fa-music text-6xl text-gray-500"></i>
             </div>
 
-            <!-- Progress Bar -->
+            <div id="album-art-container" class="aspect-square bg-gray-700 rounded-lg shadow-md overflow-hidden">
+                <img id="album-art-img" 
+                     src="https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=512&auto=format&fit=crop" 
+                     onerror="this.onerror=null;this.src='https://placehold.co/512x512/282828/b3b3b3?text=NMusic';"
+                     alt="Album Art" 
+                     class="w-full h-full object-cover">
+            </div>
+
             <div>
                 <div id="progress-bar-container" class="bg-gray-600 rounded-full h-1.5 cursor-pointer">
                     <div id="progress-bar" class="bg-green-500 h-1.5 rounded-full w-0"></div>
@@ -83,19 +63,17 @@
                 </div>
             </div>
 
-            <!-- Controls -->
             <div class="flex justify-around items-center">
+                <button id="playlist-toggle-btn" class="text-2xl text-custom-gray hover:text-white transition-colors"><i class="fas fa-guitar"></i></button>
                 <button id="prev-btn" class="text-2xl text-custom-gray hover:text-white transition-colors"><i class="fas fa-backward-step"></i></button>
                 <button id="play-pause-btn" class="bg-green-500 text-black w-16 h-16 rounded-full flex items-center justify-center text-3xl shadow-lg transform hover:scale-105 transition-transform">
                     <i id="play-pause-icon" class="fas fa-play"></i>
                 </button>
                 <button id="next-btn" class="text-2xl text-custom-gray hover:text-white transition-colors"><i class="fas fa-forward-step"></i></button>
-                <!-- NEW: Button to open the queue modal -->
                 <button id="queue-toggle-btn" class="text-2xl text-custom-gray hover:text-white transition-colors"><i class="fas fa-list-ul"></i></button>
             </div>
         </div>
         
-        <!-- Add Song Section -->
         <div class="flex-shrink-0">
             <form id="add-song-form" class="flex space-x-2">
                 <input type="text" id="song-name-input" class="flex-grow bg-custom-card border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Enter a song name to add" required>
@@ -104,9 +82,9 @@
         </div>
     </div>
 
-    <!-- NEW: Queue Modal (hidden by default) -->
+    <!-- Queue Modal -->
     <div id="queue-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center hidden z-50">
-        <div id="queue-modal-content" class="bg-custom-card w-full max-w-md h-3/4 rounded-t-2xl flex flex-col transform translate-y-full">
+        <div id="queue-modal-content" class="modal-content bg-custom-card w-full max-w-md h-3/4 rounded-t-2xl flex flex-col transform translate-y-full">
              <div class="p-4 flex justify-between items-center border-b border-gray-700 flex-shrink-0">
                 <h3 class="font-semibold text-lg">Up Next</h3>
                 <div>
@@ -114,24 +92,34 @@
                     <button id="close-queue-btn" class="text-xl text-custom-gray hover:text-white"><i class="fas fa-times"></i></button>
                 </div>
             </div>
-            <div id="queue-list" class="queue-list flex-grow overflow-y-auto p-2 space-y-2">
-                <!-- Queue items will be injected here by JavaScript -->
+            <div id="queue-list" class="list-scrollbar flex-grow overflow-y-auto p-2 space-y-2">
                 <div id="empty-queue-message" class="text-center text-custom-gray p-8">Your queue is empty.</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Playlist Modal -->
+    <div id="playlist-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center hidden z-50">
+        <div id="playlist-modal-content" class="modal-content bg-custom-card w-full max-w-md h-3/4 rounded-t-2xl flex flex-col transform translate-y-full">
+             <div class="p-4 flex justify-between items-center border-b border-gray-700 flex-shrink-0">
+                <h3 class="font-semibold text-lg">Playlist</h3>
+                <button id="close-playlist-btn" class="text-xl text-custom-gray hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="playlist-list" class="list-scrollbar flex-grow overflow-y-auto p-2 space-y-2">
+                <div id="empty-playlist-message" class="text-center text-custom-gray p-8">Loading playlist...</div>
             </div>
         </div>
     </div>
 
     <audio id="audio-player" class="hidden"></audio>
 
-    <!-- SortableJS for drag-and-drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- CONFIGURATION ---
-            const API_BASE_URL = '';
+            const API_BASE_URL = 'https://nmusic.onrender.com';
 
-            // --- DOM ELEMENTS ---
+            // --- DOM Elements ---
             const apiStatusEl = document.getElementById('api-status');
             const audioPlayer = document.getElementById('audio-player');
             const playPauseBtn = document.getElementById('play-pause-btn');
@@ -155,13 +143,22 @@
             const emptyQueueMessage = document.getElementById('empty-queue-message');
             const clearQueueBtn = document.getElementById('clear-queue-btn');
 
-            // --- STATE ---
+            // Playlist Modal Elements
+            const playlistModal = document.getElementById('playlist-modal');
+            const playlistModalContent = document.getElementById('playlist-modal-content');
+            const playlistToggleBtn = document.getElementById('playlist-toggle-btn');
+            const closePlaylistBtn = document.getElementById('close-playlist-btn');
+            const playlistListEl = document.getElementById('playlist-list');
+            const emptyPlaylistMessage = document.getElementById('empty-playlist-message');
+
+            // --- State ---
             let currentQueue = [];
+            let currentPlaylist = [];
             let currentSongIndex = -1;
             let isPlaying = false;
             let sortableInstance = null;
 
-            // --- API FUNCTIONS ---
+            // --- API Functions ---
             const api = {
                 getQueue: async () => {
                     try {
@@ -171,9 +168,28 @@
                         return await response.json();
                     } catch (error) {
                         console.error('Failed to get queue:', error);
-                        apiStatusEl.textContent = 'API Connection Error. Check server CORS settings.';
+                        if (error.message && error.message.includes('500')) {
+                            apiStatusEl.textContent = 'API Server Error (500). Check your server logs on Render for crashes.';
+                        } else {
+                            apiStatusEl.textContent = 'API Connection Error. Server may be asleep or offline.';
+                        }
                         apiStatusEl.classList.remove('hidden');
                         return { queue: [] };
+                    }
+                },
+                getPlaylist: async () => {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/playlist`);
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        return await response.json();
+                    } catch (error) {
+                        console.error('Failed to get playlist:', error);
+                        if (error.message && error.message.includes('404')) {
+                            playlistListEl.innerHTML = `<div class="text-center text-custom-gray p-8">Playlist feature not found. Please add the /playlist endpoint to your API and redeploy.</div>`;
+                        } else {
+                            playlistListEl.innerHTML = `<div class="text-center text-custom-gray p-8">Could not load playlist.</div>`;
+                        }
+                        return { songs: [] };
                     }
                 },
                 addSong: async (songName) => {
@@ -185,27 +201,21 @@
                         });
                         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                         return await response.json();
-                    } catch (error) {
-                        console.error('Failed to add song:', error);
-                    }
+                    } catch (error) { console.error('Failed to add song:', error); }
                 },
                 removeSong: async (songId) => {
                      try {
                         const response = await fetch(`${API_BASE_URL}/queue/${songId}`, { method: 'DELETE' });
                         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                         return await response.json();
-                    } catch (error) {
-                        console.error('Failed to remove song:', error);
-                    }
+                    } catch (error) { console.error('Failed to remove song:', error); }
                 },
                 clearQueue: async () => {
                     try {
                         const response = await fetch(`${API_BASE_URL}/queue/clear`, { method: 'POST' });
                          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                         return await response.json();
-                    } catch (error) {
-                        console.error('Failed to clear queue:', error);
-                    }
+                    } catch (error) { console.error('Failed to clear queue:', error); }
                 },
                 reorderQueue: async (orderedIds) => {
                     try {
@@ -216,13 +226,11 @@
                         });
                         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                         return await response.json();
-                    } catch (error) {
-                        console.error('Failed to reorder queue:', error);
-                    }
+                    } catch (error) { console.error('Failed to reorder queue:', error); }
                 }
             };
 
-            // --- UI RENDERING ---
+            // --- UI Rendering ---
             const renderQueue = () => {
                 queueListEl.innerHTML = '';
                 if (currentQueue.length === 0) {
@@ -232,13 +240,13 @@
                     currentQueue.forEach((song, index) => {
                         const isCurrentSong = index === currentSongIndex;
                         const li = document.createElement('div');
-                        li.className = `flex items-center p-3 rounded-lg transition-colors ${isCurrentSong ? 'bg-green-500/20' : 'hover:bg-gray-700'}`;
+                        li.className = `flex items-center p-3 rounded-lg transition-colors cursor-grab ${isCurrentSong ? 'bg-green-500/20' : 'hover:bg-gray-700'}`;
                         li.dataset.songId = song.id;
                         li.dataset.songName = song.name;
                         li.dataset.index = index;
 
                         li.innerHTML = `
-                            <div class="flex-grow flex items-center space-x-3 cursor-pointer play-song-trigger">
+                            <div class="flex-grow flex items-center space-x-3 play-song-trigger">
                                 ${isCurrentSong && isPlaying ? '<i class="fas fa-volume-up text-green-400"></i>' : '<i class="fas fa-music text-custom-gray"></i>'}
                                 <span class="font-medium truncate">${song.name}</span>
                             </div>
@@ -253,9 +261,7 @@
                 document.querySelectorAll('.play-song-trigger').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const songElement = e.currentTarget.closest('[data-index]');
-                        if (songElement) {
-                            playSongByIndex(parseInt(songElement.dataset.index, 10));
-                        }
+                        if (songElement) playSongByIndex(parseInt(songElement.dataset.index, 10));
                     });
                 });
 
@@ -263,6 +269,36 @@
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         handleRemoveSong(btn.dataset.songId);
+                    });
+                });
+            };
+
+            const renderPlaylist = () => {
+                playlistListEl.innerHTML = '';
+                if (currentPlaylist.length === 0) {
+                    emptyPlaylistMessage.textContent = 'Playlist is empty.';
+                } else {
+                    emptyPlaylistMessage.classList.add('hidden');
+                    currentPlaylist.forEach(song => {
+                        const li = document.createElement('div');
+                        li.className = 'flex items-center p-3 rounded-lg hover:bg-gray-700 cursor-pointer play-from-playlist-trigger';
+                        li.dataset.songName = song.name;
+                        li.innerHTML = `
+                            <div class="flex-grow flex items-center space-x-3">
+                                <i class="fas fa-guitar text-custom-gray"></i>
+                                <span class="font-medium truncate">${song.name}</span>
+                            </div>
+                            <button class="play-from-playlist-btn text-custom-gray hover:text-green-500 text-sm">
+                                <i class="fas fa-play"></i>
+                            </button>
+                        `;
+                        playlistListEl.appendChild(li);
+                    });
+                }
+
+                document.querySelectorAll('.play-from-playlist-trigger').forEach(trigger => {
+                    trigger.addEventListener('click', (e) => {
+                        handlePlayFromPlaylist(trigger.dataset.songName);
                     });
                 });
             };
@@ -278,16 +314,13 @@
                 return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
             };
 
-            // --- PLAYER LOGIC ---
+            // --- Player Logic ---
             const playSongByIndex = (index) => {
                 if (index < 0 || index >= currentQueue.length) return;
-                
                 currentSongIndex = index;
                 const song = currentQueue[index];
-                
                 audioPlayer.src = `${API_BASE_URL}/play/${encodeURIComponent(song.name)}`;
                 audioPlayer.play();
-                
                 updateNowPlayingUI(song.name);
             };
 
@@ -296,34 +329,24 @@
                     playSongByIndex(0);
                     return;
                 }
-                if (audioPlayer.src) {
-                    if (isPlaying) {
-                        audioPlayer.pause();
-                    } else {
-                        audioPlayer.play();
-                    }
-                }
+                if (audioPlayer.src) isPlaying ? audioPlayer.pause() : audioPlayer.play();
             };
             
             const playNext = () => {
                 if (currentQueue.length === 0) return;
                 let nextIndex = currentSongIndex + 1;
-                if (nextIndex >= currentQueue.length) {
-                    nextIndex = 0; // Loop to the beginning
-                }
+                if (nextIndex >= currentQueue.length) nextIndex = 0;
                 playSongByIndex(nextIndex);
             };
             
             const playPrev = () => {
                 if (currentQueue.length === 0) return;
                 let prevIndex = currentSongIndex - 1;
-                if (prevIndex < 0) {
-                    prevIndex = currentQueue.length - 1; // Loop to the end
-                }
+                if (prevIndex < 0) prevIndex = currentQueue.length - 1;
                 playSongByIndex(prevIndex);
             };
 
-            // --- EVENT HANDLERS ---
+            // --- Event Handlers ---
             const handleAddSong = async (e) => {
                 e.preventDefault();
                 const songName = songNameInput.value.trim();
@@ -332,6 +355,13 @@
                     songNameInput.value = '';
                     await refreshQueue();
                 }
+            };
+
+            const handlePlayFromPlaylist = async (songName) => {
+                await api.addSong(songName);
+                await refreshQueue();
+                playSongByIndex(currentQueue.length - 1);
+                closePlaylistModal();
             };
 
             const handleRemoveSong = async (songId) => {
@@ -352,50 +382,43 @@
                 await refreshQueue();
             };
             
-            // --- MODAL LOGIC ---
-            const openQueueModal = () => {
-                queueModal.classList.remove('hidden');
-                // Animate the modal content sliding up
-                requestAnimationFrame(() => {
-                    queueModalContent.classList.remove('translate-y-full');
-                });
+            // --- Modal Logic ---
+            const openModal = (modal, content) => {
+                modal.classList.remove('hidden');
+                requestAnimationFrame(() => content.classList.remove('translate-y-full'));
             };
 
-            const closeQueueModal = () => {
-                // Animate the modal content sliding down
-                queueModalContent.classList.add('translate-y-full');
-                // Hide the modal after the transition
-                setTimeout(() => {
-                    queueModal.classList.add('hidden');
-                }, 300); // Must match the transition duration
+            const closeModal = (modal, content) => {
+                content.classList.add('translate-y-full');
+                setTimeout(() => modal.classList.add('hidden'), 300);
             };
 
-            // --- INITIALIZATION ---
+            const openQueueModal = () => openModal(queueModal, queueModalContent);
+            const closeQueueModal = () => closeModal(queueModal, queueModalContent);
+            const openPlaylistModal = () => openModal(playlistModal, playlistModalContent);
+            const closePlaylistModal = () => closeModal(playlistModal, playlistModalContent);
+
+            // --- Initialization ---
             const refreshQueue = async () => {
                 const lastPlayingId = currentSongIndex > -1 ? currentQueue[currentSongIndex]?.id : null;
-                
                 const queueData = await api.getQueue();
                 currentQueue = queueData.queue || [];
-
-                if (lastPlayingId) {
-                    const newIndex = currentQueue.findIndex(song => song.id === lastPlayingId);
-                    currentSongIndex = newIndex;
-                } else {
-                     currentSongIndex = -1;
-                }
-                
+                currentSongIndex = lastPlayingId ? currentQueue.findIndex(song => song.id === lastPlayingId) : -1;
                 if (!isPlaying && currentSongIndex === -1) {
                     updateNowPlayingUI(null);
                     playPauseIcon.className = 'fas fa-play';
                 }
-
                 renderQueue();
+            };
+
+            const loadPlaylist = async () => {
+                const playlistData = await api.getPlaylist();
+                currentPlaylist = playlistData.songs || [];
+                renderPlaylist();
             };
             
             const initSortable = () => {
-                if (sortableInstance) {
-                    sortableInstance.destroy();
-                }
+                if (sortableInstance) sortableInstance.destroy();
                 sortableInstance = new Sortable(queueListEl, {
                     animation: 150,
                     ghostClass: 'sortable-ghost',
@@ -409,58 +432,42 @@
             };
 
             const init = async () => {
-                // --- Audio player event listeners ---
-                audioPlayer.addEventListener('play', () => {
-                    isPlaying = true;
-                    playPauseIcon.className = 'fas fa-pause';
-                    renderQueue();
-                });
-                audioPlayer.addEventListener('pause', () => {
-                    isPlaying = false;
-                    playPauseIcon.className = 'fas fa-play';
-                    renderQueue();
-                });
+                audioPlayer.addEventListener('play', () => { isPlaying = true; playPauseIcon.className = 'fas fa-pause'; renderQueue(); });
+                audioPlayer.addEventListener('pause', () => { isPlaying = false; playPauseIcon.className = 'fas fa-play'; renderQueue(); });
                 audioPlayer.addEventListener('ended', playNext);
-                
                 audioPlayer.addEventListener('timeupdate', () => {
                     if (audioPlayer.duration) {
                         progressBar.style.width = `${(audioPlayer.currentTime / audioPlayer.duration) * 100}%`;
                         currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
                     }
                 });
-                audioPlayer.addEventListener('loadedmetadata', () => {
-                    totalTimeEl.textContent = formatTime(audioPlayer.duration);
-                });
+                audioPlayer.addEventListener('loadedmetadata', () => { totalTimeEl.textContent = formatTime(audioPlayer.duration); });
                 
-                // --- Control buttons ---
                 playPauseBtn.addEventListener('click', togglePlayPause);
                 nextBtn.addEventListener('click', playNext);
                 prevBtn.addEventListener('click', playPrev);
-
-                // --- Queue management ---
                 addSongForm.addEventListener('submit', handleAddSong);
                 clearQueueBtn.addEventListener('click', handleClearQueue);
                 
-                // --- Modal Listeners ---
+                // Modal Listeners
                 queueToggleBtn.addEventListener('click', openQueueModal);
                 closeQueueBtn.addEventListener('click', closeQueueModal);
-                queueModal.addEventListener('click', (e) => {
-                    // Close modal if the dark overlay is clicked
-                    if (e.target === queueModal) {
-                        closeQueueModal();
-                    }
-                });
+                queueModal.addEventListener('click', (e) => { if (e.target === queueModal) closeQueueModal(); });
+                
+                playlistToggleBtn.addEventListener('click', openPlaylistModal);
+                closePlaylistBtn.addEventListener('click', closePlaylistModal);
+                playlistModal.addEventListener('click', (e) => { if (e.target === playlistModal) closePlaylistModal(); });
 
-                // --- Progress bar seeking ---
+                // FIX: Add stopPropagation to the progress bar click handler
                 progressBarContainer.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     if (audioPlayer.duration) {
                         const rect = progressBarContainer.getBoundingClientRect();
                         audioPlayer.currentTime = (e.clientX - rect.left) / rect.width * audioPlayer.duration;
                     }
                 });
 
-                // --- Initial load ---
-                await refreshQueue();
+                await Promise.all([refreshQueue(), loadPlaylist()]);
                 initSortable();
             };
 
@@ -468,17 +475,73 @@
         });
     </script>
     
-    <!-- PWA Service Worker Registration -->
     <script>
+        // PWA Service Worker Registration (Embedded)
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            const swContent = `
+                const CACHE_NAME = 'nmusic-player-v5'; // Incremented version
+                const API_CACHE_NAME = 'nmusic-api-cache-v1';
+                const urlsToCache = [
+                  '/',
+                  '/index.html',
+                  'https://cdn.tailwindcss.com',
+                  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
+                  'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js',
+                  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
+                ];
+
+                self.addEventListener('install', event => {
+                  event.waitUntil(
+                    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+                  );
+                });
+
+                self.addEventListener('fetch', event => {
+                  const { url, method } = event.request;
+                  if (method !== 'GET') return;
+
+                  if (url.includes('nmusic.onrender.com')) {
+                    if (url.includes('/play/')) {
+                      return; // Do not cache streaming audio
+                    }
+                    event.respondWith(
+                      caches.open(API_CACHE_NAME).then(cache => {
+                        return fetch(event.request).then(networkResponse => {
+                          cache.put(event.request, networkResponse.clone());
+                          return networkResponse;
+                        }).catch(() => cache.match(event.request));
+                      })
+                    );
+                    return;
+                  }
+
+                  event.respondWith(
+                    caches.match(event.request).then(response => response || fetch(event.request))
+                  );
+                });
+
+                self.addEventListener('activate', event => {
+                  const cacheWhitelist = [CACHE_NAME, API_CACHE_NAME];
+                  event.waitUntil(
+                    caches.keys().then(cacheNames => {
+                      return Promise.all(
+                        cacheNames.map(cacheName => {
+                          if (cacheWhitelist.indexOf(cacheName) === -1) {
+                            return caches.delete(cacheName);
+                          }
+                        })
+                      );
                     })
-                    .catch(error => {
-                        console.log('ServiceWorker registration failed: ', error);
-                    });
+                  );
+                });
+            `;
+            const swBlob = new Blob([swContent], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(swBlob);
+
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register(swUrl)
+                    .then(registration => console.log('ServiceWorker registration successful with scope: ', registration.scope))
+                    .catch(error => console.log('ServiceWorker registration failed: ', error));
             });
         }
     </script>
