@@ -2,8 +2,8 @@ name: API Pinger
 
 on:
   schedule:
-    # Runs every 5 minutes
-    - cron: '*/5 * * * *'
+    # Runs every 14 minutes.
+    - cron: '*/14 * * * *'
   workflow_dispatch:
     # Allows you to run this workflow manually from the Actions tab
 
@@ -13,6 +13,9 @@ jobs:
     env:
       API_URL: https://nmusic.onrender.com/
     steps:
+      - name: Wait for 50 seconds before starting
+        run: sleep 50s
+      
       - name: Checkout repository content
         uses: actions/checkout@v4
 
@@ -21,11 +24,9 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
+      -  name: Install dependencies
+         run: pip install requests
 
-      - name: Run the ping script
-        run: python pinger.py # Make sure your python file is named this
+      -  name: Run the ping script
+         run: python pinger.py # Make sure your python file is named this
 
