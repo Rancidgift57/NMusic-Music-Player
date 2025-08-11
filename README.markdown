@@ -76,20 +76,20 @@ irm https://get.tur.so/install.ps1 | iex
 ```
 
 **Log in and Create a Database:**
-Log in and Create a Database:
-
 Authenticate with your GitHub account:
 
+```bash
 turso auth login
-
+```
 Create a new database (e.g., nmusic-db):
-
+```bash
 turso db create nmusic-db
-
+```
 Get the database URL:
-
+```bash
 turso db show nmusic-db --url
-# Output will be something like: libsql://nmusic-db-yourusername.turso.io
+```
+ - Output will be something like: libsql://nmusic-db-yourusername.turso.io
 
 Create an authentication token for your app:
 ```bash
