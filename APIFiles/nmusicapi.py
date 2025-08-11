@@ -113,6 +113,25 @@ async def play_audio(song_name: str):
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Playback error: {str(e)}")
+    
+
+# Add this to your main.py API file
+
+@app.get("/playlist")
+async def get_playlist():
+    """
+    Fetch all unique song titles from the database to populate the playlist.
+    """
+    try:
+        with libsql.connect("nmusic.db", sync_url=TURSO_DB_URL, auth_token=TURSO_AUTH_TOKEN) as conn:
+            # Fetch all distinct titles
+            result_set = conn.execute(
+                "SELECT DISTINCT title FROM youtube_audio ORDER BY title ASC"
+            )
+            songs = [{"name": row[0]} for row in result_set.fetchall()]
+            return {"songs": songs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Playlist fetch error: {str(e)}")
 
 # --- REVISED QUEUE LOGIC ---
 # Using a single, global queue for simplicity. For multiple users, you'd use session IDs.
