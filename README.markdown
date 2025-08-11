@@ -63,7 +63,6 @@ The project is divided into several key components that work together:
 - An account on a hosting service like Render for deploying the API and static site.
 
 ### 1. Turso Database Setup
-
 This project uses Turso as its database. First, you need to install and log in to the Turso CLI.
 
 **Install the Turso CLI:**
@@ -77,6 +76,48 @@ irm https://get.tur.so/install.ps1 | iex
 ```
 
 **Log in and Create a Database:**
+Log in and Create a Database:
+
+Authenticate with your GitHub account:
+
+turso auth login
+
+Create a new database (e.g., nmusic-db):
+
+turso db create nmusic-db
+
+Get the database URL:
+
+turso db show nmusic-db --url
+# Output will be something like: libsql://nmusic-db-yourusername.turso.io
+
+Create an authentication token for your app:
+```bash
+turso db tokens create nmusic-db
+```
+# This will output a long token string.
+
+Create a Table for Songs:
+Connect to the database shell to create a table for storing song data:
+```bash
+turso db shell nmusic-db
+```
+
+In the Turso SQL shell, run the following command to create a songs table:
+```sql
+      CREATE TABLE IF NOT EXISTS youtube_audio (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    audio_data BLOB NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+```
+
+Exit the shell by typing:
+```sql
+.quit
+```
+Important: Save the database URL and the auth token. You will need them for the next step.
 
 CONNECT
 
