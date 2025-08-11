@@ -45,17 +45,22 @@
         .sortable-chosen {
             background: #3a3a3a;
         }
+
+        /* Modal transition */
+        #queue-modal-content {
+            transition: transform 0.3s ease-out;
+        }
     </style>
 </head>
-<body class="bg-custom-gray text-white antialiased">
+<body class="bg-custom-gray text-white antialiased overflow-hidden">
 
     <div class="container mx-auto max-w-md h-screen flex flex-col p-4 space-y-4 bg-custom-light-gray">
 
         <!-- API Status Message -->
         <div id="api-status" class="text-center text-red-400 text-sm p-2 rounded-lg bg-red-500/10 hidden"></div>
 
-        <!-- Now Playing Section -->
-        <div class="flex-shrink-0 bg-custom-card p-6 rounded-xl shadow-lg space-y-4">
+        <!-- Main Player View (takes up most of the screen) -->
+        <div class="flex-grow flex flex-col justify-center bg-custom-card p-6 rounded-xl shadow-lg space-y-4">
             <div class="text-center">
                 <h2 class="text-sm text-custom-gray uppercase tracking-wider">Now Playing</h2>
                 <p id="now-playing-song" class="text-xl font-bold truncate">No Song Selected</p>
@@ -79,24 +84,14 @@
             </div>
 
             <!-- Controls -->
-            <div class="flex justify-center items-center space-x-8">
+            <div class="flex justify-around items-center">
                 <button id="prev-btn" class="text-2xl text-custom-gray hover:text-white transition-colors"><i class="fas fa-backward-step"></i></button>
                 <button id="play-pause-btn" class="bg-green-500 text-black w-16 h-16 rounded-full flex items-center justify-center text-3xl shadow-lg transform hover:scale-105 transition-transform">
                     <i id="play-pause-icon" class="fas fa-play"></i>
                 </button>
                 <button id="next-btn" class="text-2xl text-custom-gray hover:text-white transition-colors"><i class="fas fa-forward-step"></i></button>
-            </div>
-        </div>
-
-        <!-- Queue Section -->
-        <div class="flex-grow flex flex-col bg-custom-card rounded-xl shadow-lg overflow-hidden">
-             <div class="p-4 flex justify-between items-center border-b border-gray-700">
-                <h3 class="font-semibold">Up Next</h3>
-                <button id="clear-queue-btn" class="text-sm text-custom-gray hover:text-red-500 transition-colors">Clear All</button>
-            </div>
-            <div id="queue-list" class="queue-list flex-grow overflow-y-auto p-2 space-y-2">
-                <!-- Queue items will be injected here by JavaScript -->
-                <div id="empty-queue-message" class="text-center text-custom-gray p-8">Your queue is empty.</div>
+                <!-- NEW: Button to open the queue modal -->
+                <button id="queue-toggle-btn" class="text-2xl text-custom-gray hover:text-white transition-colors"><i class="fas fa-list-ul"></i></button>
             </div>
         </div>
         
@@ -109,13 +104,29 @@
         </div>
     </div>
 
+    <!-- NEW: Queue Modal (hidden by default) -->
+    <div id="queue-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center hidden z-50">
+        <div id="queue-modal-content" class="bg-custom-card w-full max-w-md h-3/4 rounded-t-2xl flex flex-col transform translate-y-full">
+             <div class="p-4 flex justify-between items-center border-b border-gray-700 flex-shrink-0">
+                <h3 class="font-semibold text-lg">Up Next</h3>
+                <div>
+                    <button id="clear-queue-btn" class="text-sm text-custom-gray hover:text-red-500 transition-colors mr-4">Clear All</button>
+                    <button id="close-queue-btn" class="text-xl text-custom-gray hover:text-white"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div id="queue-list" class="queue-list flex-grow overflow-y-auto p-2 space-y-2">
+                <!-- Queue items will be injected here by JavaScript -->
+                <div id="empty-queue-message" class="text-center text-custom-gray p-8">Your queue is empty.</div>
+            </div>
+        </div>
+    </div>
+
     <audio id="audio-player" class="hidden"></audio>
 
     <!-- SortableJS for drag-and-drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <script>
-        // All your existing app logic goes here...
         document.addEventListener('DOMContentLoaded', () => {
             // --- CONFIGURATION ---
             const API_BASE_URL = '';
@@ -132,11 +143,16 @@
             const currentTimeEl = document.getElementById('current-time');
             const totalTimeEl = document.getElementById('total-time');
             const nowPlayingSongEl = document.getElementById('now-playing-song');
-            
-            const queueListEl = document.getElementById('queue-list');
-            const emptyQueueMessage = document.getElementById('empty-queue-message');
             const addSongForm = document.getElementById('add-song-form');
             const songNameInput = document.getElementById('song-name-input');
+            
+            // Queue Modal Elements
+            const queueModal = document.getElementById('queue-modal');
+            const queueModalContent = document.getElementById('queue-modal-content');
+            const queueToggleBtn = document.getElementById('queue-toggle-btn');
+            const closeQueueBtn = document.getElementById('close-queue-btn');
+            const queueListEl = document.getElementById('queue-list');
+            const emptyQueueMessage = document.getElementById('empty-queue-message');
             const clearQueueBtn = document.getElementById('clear-queue-btn');
 
             // --- STATE ---
@@ -290,17 +306,19 @@
             };
             
             const playNext = () => {
+                if (currentQueue.length === 0) return;
                 let nextIndex = currentSongIndex + 1;
                 if (nextIndex >= currentQueue.length) {
-                    nextIndex = 0;
+                    nextIndex = 0; // Loop to the beginning
                 }
                 playSongByIndex(nextIndex);
             };
             
             const playPrev = () => {
+                if (currentQueue.length === 0) return;
                 let prevIndex = currentSongIndex - 1;
                 if (prevIndex < 0) {
-                    prevIndex = currentQueue.length - 1;
+                    prevIndex = currentQueue.length - 1; // Loop to the end
                 }
                 playSongByIndex(prevIndex);
             };
@@ -334,6 +352,24 @@
                 await refreshQueue();
             };
             
+            // --- MODAL LOGIC ---
+            const openQueueModal = () => {
+                queueModal.classList.remove('hidden');
+                // Animate the modal content sliding up
+                requestAnimationFrame(() => {
+                    queueModalContent.classList.remove('translate-y-full');
+                });
+            };
+
+            const closeQueueModal = () => {
+                // Animate the modal content sliding down
+                queueModalContent.classList.add('translate-y-full');
+                // Hide the modal after the transition
+                setTimeout(() => {
+                    queueModal.classList.add('hidden');
+                }, 300); // Must match the transition duration
+            };
+
             // --- INITIALIZATION ---
             const refreshQueue = async () => {
                 const lastPlayingId = currentSongIndex > -1 ? currentQueue[currentSongIndex]?.id : null;
@@ -373,6 +409,7 @@
             };
 
             const init = async () => {
+                // --- Audio player event listeners ---
                 audioPlayer.addEventListener('play', () => {
                     isPlaying = true;
                     playPauseIcon.className = 'fas fa-pause';
@@ -384,6 +421,7 @@
                     renderQueue();
                 });
                 audioPlayer.addEventListener('ended', playNext);
+                
                 audioPlayer.addEventListener('timeupdate', () => {
                     if (audioPlayer.duration) {
                         progressBar.style.width = `${(audioPlayer.currentTime / audioPlayer.duration) * 100}%`;
@@ -394,13 +432,26 @@
                     totalTimeEl.textContent = formatTime(audioPlayer.duration);
                 });
                 
+                // --- Control buttons ---
                 playPauseBtn.addEventListener('click', togglePlayPause);
                 nextBtn.addEventListener('click', playNext);
                 prevBtn.addEventListener('click', playPrev);
 
+                // --- Queue management ---
                 addSongForm.addEventListener('submit', handleAddSong);
                 clearQueueBtn.addEventListener('click', handleClearQueue);
                 
+                // --- Modal Listeners ---
+                queueToggleBtn.addEventListener('click', openQueueModal);
+                closeQueueBtn.addEventListener('click', closeQueueModal);
+                queueModal.addEventListener('click', (e) => {
+                    // Close modal if the dark overlay is clicked
+                    if (e.target === queueModal) {
+                        closeQueueModal();
+                    }
+                });
+
+                // --- Progress bar seeking ---
                 progressBarContainer.addEventListener('click', (e) => {
                     if (audioPlayer.duration) {
                         const rect = progressBarContainer.getBoundingClientRect();
@@ -408,6 +459,7 @@
                     }
                 });
 
+                // --- Initial load ---
                 await refreshQueue();
                 initSortable();
             };
