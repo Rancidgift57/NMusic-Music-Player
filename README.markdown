@@ -211,6 +211,23 @@ The frontend is a static site located in `WebAppFiles`.
 
 Please ensure your code adheres to the project's coding standards and includes appropriate documentation. For major changes, open an issue first to discuss your proposed changes.
 
+### API Auto-Pinger
+This project includes an automated script that runs on a schedule to keep the nmusic API alive and prevent it from "sleeping" due to inactivity on Render's free hosting tier.
+**How It Works**
+The keep-alive mechanism uses GitHub Actions to run a Python script on a regular schedule.
+ - Scheduled Trigger: A GitHub Actions workflow, defined in .github/workflows/pinger.yml, is scheduled to run automatically every 5 minutes.
+ - Python Script Execution: When the workflow runs, it executes the api_pinger_py.py script.
+ - Continuous Pinging: This script runs in a loop for about 4.5 minutes, sending an HTTP GET request to the API endpoint (https://nmusic.onrender.com/) every 50 seconds.
+This ensures that the Render service receives traffic consistently, preventing it from spinning down.
+
+**Monitoring the Pinger**
+You can easily check if the pinger is working correctly:
+ - Navigate to the Actions tab in this GitHub repository.
+ - Click on the "API Pinger" workflow in the left sidebar.
+ - You will see a history of all the workflow runs. A green checkmark (✅) indicates a successful run.
+ - Click on any successful run to view the detailed logs and see the "SUCCESS" messages from the Python script.
+No manual intervention is needed. The workflow is fully automated.
+
 **Contact**
  - For questions, suggestions, or support, please reach out to the NMusic team:
  - Email: nnair7598@gmail.com
