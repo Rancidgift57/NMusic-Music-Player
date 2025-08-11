@@ -7,8 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- PWA Manifest (Embedded) -->
-    <link rel="manifest" href="data:application/manifest+json;base64,ew0KICAgICJuYW1lIjogIk5NdXNpYyBQbGF5ZXIiLA0KICAgICJzaG9ydF9uYW1lIjogIk5NdXNpYyIsDQogICAgImRlc2NyaXB0aW9uIjogIkEgc2ltcGxlIG11c2ljIHBsYXllciB3ZWIgYXBwbGljYXRpb24uIiwNCiAgICAic3RhcnRfdXJsIjogIi8iLA0KICAgICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLA0KICAgICJCYWNrZ3JvdW5kX2NvbG9yIjogIiMxMjEyMTIiLA0KICAgICJ0aGVtZV9jb2xvciI6ICIjMURCOTU0IiwNCiAgICAiaWNvbnMiOiBbDQogICAgICAgIHsNCiAgICAgICAgICAic3JjIjogImh0dHBzOi8vcGxhY2Vob2xkLmNvLzE5MngxOTIvMURCOTU0L0ZGRkZGRj90ZXh0PU5NIiwNCiAgICAgICAgICAidHlwZSI6ICJpbWFnZS9wbmciLA0KICAgICAgICAgICJzaXplcyI6ICIxOTJ4MTkyIg0KICAgICAgICB9LA0KICAgICAgICB7DQogICAgICAgICAgInNyYyI6ICJodHRwczovL3BsYWNlaG9sZC5jby81MTJ4NTEyLzFEQjk1NC9GRkZGRkY/dGV4dD1OTSIiwNCiAgICAgICAgICAidHlwZSI6ICJpbWFnZS9wbmciLA0KICAgICAgICAgICJzaXplcyI6ICI1MTJ4NTEyIg0KICAgICAgICB9DQogICAgXQ0KICB9">
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1DB954">
 
     <style>
@@ -82,7 +81,6 @@
         </div>
     </div>
 
-    <!-- Queue Modal -->
     <div id="queue-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center hidden z-50">
         <div id="queue-modal-content" class="modal-content bg-custom-card w-full max-w-md h-3/4 rounded-t-2xl flex flex-col transform translate-y-full">
              <div class="p-4 flex justify-between items-center border-b border-gray-700 flex-shrink-0">
@@ -98,7 +96,6 @@
         </div>
     </div>
     
-    <!-- Playlist Modal -->
     <div id="playlist-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center hidden z-50">
         <div id="playlist-modal-content" class="modal-content bg-custom-card w-full max-w-md h-3/4 rounded-t-2xl flex flex-col transform translate-y-full">
              <div class="p-4 flex justify-between items-center border-b border-gray-700 flex-shrink-0">
@@ -476,70 +473,10 @@
     </script>
     
     <script>
-        // PWA Service Worker Registration (Embedded)
+        // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
-            const swContent = `
-                const CACHE_NAME = 'nmusic-player-v5'; // Incremented version
-                const API_CACHE_NAME = 'nmusic-api-cache-v1';
-                const urlsToCache = [
-                  '/',
-                  '/index.html',
-                  'https://cdn.tailwindcss.com',
-                  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
-                  'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js',
-                  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
-                ];
-
-                self.addEventListener('install', event => {
-                  event.waitUntil(
-                    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-                  );
-                });
-
-                self.addEventListener('fetch', event => {
-                  const { url, method } = event.request;
-                  if (method !== 'GET') return;
-
-                  if (url.includes('nmusic.onrender.com')) {
-                    if (url.includes('/play/')) {
-                      return; // Do not cache streaming audio
-                    }
-                    event.respondWith(
-                      caches.open(API_CACHE_NAME).then(cache => {
-                        return fetch(event.request).then(networkResponse => {
-                          cache.put(event.request, networkResponse.clone());
-                          return networkResponse;
-                        }).catch(() => cache.match(event.request));
-                      })
-                    );
-                    return;
-                  }
-
-                  event.respondWith(
-                    caches.match(event.request).then(response => response || fetch(event.request))
-                  );
-                });
-
-                self.addEventListener('activate', event => {
-                  const cacheWhitelist = [CACHE_NAME, API_CACHE_NAME];
-                  event.waitUntil(
-                    caches.keys().then(cacheNames => {
-                      return Promise.all(
-                        cacheNames.map(cacheName => {
-                          if (cacheWhitelist.indexOf(cacheName) === -1) {
-                            return caches.delete(cacheName);
-                          }
-                        })
-                      );
-                    })
-                  );
-                });
-            `;
-            const swBlob = new Blob([swContent], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(swBlob);
-
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register(swUrl)
+                navigator.serviceWorker.register('/sw.js')
                     .then(registration => console.log('ServiceWorker registration successful with scope: ', registration.scope))
                     .catch(error => console.log('ServiceWorker registration failed: ', error));
             });
