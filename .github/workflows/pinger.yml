@@ -2,7 +2,7 @@ name: API Pinger
 
 on:
   schedule:
-    # Runs every 13 minutes.
+    # Runs every 13 minutes. The script itself will add a random delay.
     - cron: '*/13 * * * *'
   workflow_dispatch:
     # Allows you to run this workflow manually from the Actions tab
@@ -13,9 +13,6 @@ jobs:
     env:
       API_URL: https://nmusic.onrender.com/
     steps:
-      - name: Wait for a random time (0 to 120 seconds)
-        run: sleep $((RANDOM % 121))s
-
       - name: Checkout repository content
         uses: actions/checkout@v4
 
@@ -28,4 +25,4 @@ jobs:
         run: pip install requests
 
       - name: Run the ping script
-        run: python pinger.py # Assumes the simple, one-ping script
+        run: python pinger.py # Make sure your python file is named this
