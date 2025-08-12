@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
+    <!-- PWA Manifest (Embedded) -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1DB954">
 
@@ -43,9 +44,9 @@
                 <h2 class="text-sm text-custom-gray uppercase tracking-wider">Now Playing</h2>
                 <p id="now-playing-song" class="text-xl font-bold truncate">No Song Selected</p>
             </div>
-
+            
             <div id="album-art-container" class="aspect-square bg-gray-700 rounded-lg shadow-md overflow-hidden">
-                <img id="album-art-img" 
+                 <img id="album-art-img" 
                      src="https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=512&auto=format&fit=crop" 
                      onerror="this.onerror=null;this.src='https://placehold.co/512x512/282828/b3b3b3?text=NMusic';"
                      alt="Album Art" 
@@ -81,6 +82,7 @@
         </div>
     </div>
 
+    <!-- Queue Modal -->
     <div id="queue-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center hidden z-50">
         <div id="queue-modal-content" class="modal-content bg-custom-card w-full max-w-md h-3/4 rounded-t-2xl flex flex-col transform translate-y-full">
              <div class="p-4 flex justify-between items-center border-b border-gray-700 flex-shrink-0">
@@ -96,6 +98,7 @@
         </div>
     </div>
     
+    <!-- Playlist Modal -->
     <div id="playlist-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center hidden z-50">
         <div id="playlist-modal-content" class="modal-content bg-custom-card w-full max-w-md h-3/4 rounded-t-2xl flex flex-col transform translate-y-full">
              <div class="p-4 flex justify-between items-center border-b border-gray-700 flex-shrink-0">
@@ -131,7 +134,6 @@
             const addSongForm = document.getElementById('add-song-form');
             const songNameInput = document.getElementById('song-name-input');
             
-            // Queue Modal Elements
             const queueModal = document.getElementById('queue-modal');
             const queueModalContent = document.getElementById('queue-modal-content');
             const queueToggleBtn = document.getElementById('queue-toggle-btn');
@@ -140,7 +142,6 @@
             const emptyQueueMessage = document.getElementById('empty-queue-message');
             const clearQueueBtn = document.getElementById('clear-queue-btn');
 
-            // Playlist Modal Elements
             const playlistModal = document.getElementById('playlist-modal');
             const playlistModalContent = document.getElementById('playlist-modal-content');
             const playlistToggleBtn = document.getElementById('playlist-toggle-btn');
@@ -153,7 +154,9 @@
             let currentPlaylist = [];
             let currentSongIndex = -1;
             let isPlaying = false;
-            let sortableInstance = null;
+            let isPlayingFromPlaylist = false; // New state to track playback source
+            let sortableQueueInstance = null;
+            let sortablePlaylistInstance = null;
 
             // --- API Functions ---
             const api = {
@@ -165,11 +168,7 @@
                         return await response.json();
                     } catch (error) {
                         console.error('Failed to get queue:', error);
-                        if (error.message && error.message.includes('500')) {
-                            apiStatusEl.textContent = 'API Server Error (500). Check your server logs on Render for crashes.';
-                        } else {
-                            apiStatusEl.textContent = 'API Connection Error. Server may be asleep or offline.';
-                        }
+                        apiStatusEl.textContent = 'API Connection Error. Server may be asleep or offline.';
                         apiStatusEl.classList.remove('hidden');
                         return { queue: [] };
                     }
@@ -181,11 +180,7 @@
                         return await response.json();
                     } catch (error) {
                         console.error('Failed to get playlist:', error);
-                        if (error.message && error.message.includes('404')) {
-                            playlistListEl.innerHTML = `<div class="text-center text-custom-gray p-8">Playlist feature not found. Please add the /playlist endpoint to your API and redeploy.</div>`;
-                        } else {
-                            playlistListEl.innerHTML = `<div class="text-center text-custom-gray p-8">Could not load playlist.</div>`;
-                        }
+                        playlistListEl.innerHTML = `<div class="text-center text-custom-gray p-8">Could not load playlist.</div>`;
                         return { songs: [] };
                     }
                 },
@@ -235,33 +230,27 @@
                 } else {
                     emptyQueueMessage.classList.add('hidden');
                     currentQueue.forEach((song, index) => {
-                        const isCurrentSong = index === currentSongIndex;
+                        const isCurrentSong = index === currentSongIndex && !isPlayingFromPlaylist;
                         const li = document.createElement('div');
                         li.className = `flex items-center p-3 rounded-lg transition-colors cursor-grab ${isCurrentSong ? 'bg-green-500/20' : 'hover:bg-gray-700'}`;
                         li.dataset.songId = song.id;
                         li.dataset.songName = song.name;
                         li.dataset.index = index;
-
                         li.innerHTML = `
                             <div class="flex-grow flex items-center space-x-3 play-song-trigger">
                                 ${isCurrentSong && isPlaying ? '<i class="fas fa-volume-up text-green-400"></i>' : '<i class="fas fa-music text-custom-gray"></i>'}
                                 <span class="font-medium truncate">${song.name}</span>
                             </div>
-                            <button class="remove-song-btn text-custom-gray hover:text-red-500 text-sm" data-song-id="${song.id}">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        `;
+                            <button class="remove-song-btn text-custom-gray hover:text-red-500 text-sm" data-song-id="${song.id}"><i class="fas fa-trash"></i></button>`;
                         queueListEl.appendChild(li);
                     });
                 }
-                
                 document.querySelectorAll('.play-song-trigger').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const songElement = e.currentTarget.closest('[data-index]');
-                        if (songElement) playSongByIndex(parseInt(songElement.dataset.index, 10));
+                        if (songElement) playFromQueueByIndex(parseInt(songElement.dataset.index, 10));
                     });
                 });
-
                 document.querySelectorAll('.remove-song-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -276,34 +265,29 @@
                     emptyPlaylistMessage.textContent = 'Playlist is empty.';
                 } else {
                     emptyPlaylistMessage.classList.add('hidden');
-                    currentPlaylist.forEach(song => {
+                    currentPlaylist.forEach((song, index) => {
+                        const isCurrentSong = index === currentSongIndex && isPlayingFromPlaylist;
                         const li = document.createElement('div');
-                        li.className = 'flex items-center p-3 rounded-lg hover:bg-gray-700 cursor-pointer play-from-playlist-trigger';
+                        li.className = `flex items-center p-3 rounded-lg transition-colors cursor-grab ${isCurrentSong ? 'bg-green-500/20' : 'hover:bg-gray-700'}`;
                         li.dataset.songName = song.name;
+                        li.dataset.index = index;
                         li.innerHTML = `
-                            <div class="flex-grow flex items-center space-x-3">
-                                <i class="fas fa-guitar text-custom-gray"></i>
+                            <div class="flex-grow flex items-center space-x-3 play-from-playlist-trigger">
+                                ${isCurrentSong && isPlaying ? '<i class="fas fa-volume-up text-green-400"></i>' : '<i class="fas fa-guitar text-custom-gray"></i>'}
                                 <span class="font-medium truncate">${song.name}</span>
-                            </div>
-                            <button class="play-from-playlist-btn text-custom-gray hover:text-green-500 text-sm">
-                                <i class="fas fa-play"></i>
-                            </button>
-                        `;
+                            </div>`;
                         playlistListEl.appendChild(li);
                     });
                 }
-
                 document.querySelectorAll('.play-from-playlist-trigger').forEach(trigger => {
                     trigger.addEventListener('click', (e) => {
-                        handlePlayFromPlaylist(trigger.dataset.songName);
+                        const songElement = e.currentTarget.closest('[data-index]');
+                        if (songElement) playFromPlaylistByIndex(parseInt(songElement.dataset.index, 10));
                     });
                 });
             };
 
-            const updateNowPlayingUI = (songName) => {
-                nowPlayingSongEl.textContent = songName || 'No Song Selected';
-            };
-            
+            const updateNowPlayingUI = (songName) => { nowPlayingSongEl.textContent = songName || 'No Song Selected'; };
             const formatTime = (seconds) => {
                 if (isNaN(seconds)) return '0:00';
                 const minutes = Math.floor(seconds / 60);
@@ -312,8 +296,9 @@
             };
 
             // --- Player Logic ---
-            const playSongByIndex = (index) => {
+            const playFromQueueByIndex = (index) => {
                 if (index < 0 || index >= currentQueue.length) return;
+                isPlayingFromPlaylist = false;
                 currentSongIndex = index;
                 const song = currentQueue[index];
                 audioPlayer.src = `${API_BASE_URL}/play/${encodeURIComponent(song.name)}`;
@@ -321,26 +306,51 @@
                 updateNowPlayingUI(song.name);
             };
 
+            const playFromPlaylistByIndex = (index) => {
+                if (index < 0 || index >= currentPlaylist.length) return;
+                isPlayingFromPlaylist = true;
+                currentSongIndex = index;
+                const song = currentPlaylist[index];
+                audioPlayer.src = `${API_BASE_URL}/play/${encodeURIComponent(song.name)}`;
+                audioPlayer.play();
+                updateNowPlayingUI(song.name);
+            };
+
             const togglePlayPause = () => {
-                if (currentSongIndex === -1 && currentQueue.length > 0) {
-                    playSongByIndex(0);
+                if (currentSongIndex === -1) {
+                    if (isPlayingFromPlaylist && currentPlaylist.length > 0) playFromPlaylistByIndex(0);
+                    else if (!isPlayingFromPlaylist && currentQueue.length > 0) playFromQueueByIndex(0);
                     return;
                 }
                 if (audioPlayer.src) isPlaying ? audioPlayer.pause() : audioPlayer.play();
             };
             
             const playNext = () => {
-                if (currentQueue.length === 0) return;
-                let nextIndex = currentSongIndex + 1;
-                if (nextIndex >= currentQueue.length) nextIndex = 0;
-                playSongByIndex(nextIndex);
+                if (isPlayingFromPlaylist) {
+                    if (currentPlaylist.length === 0) return;
+                    let nextIndex = currentSongIndex + 1;
+                    if (nextIndex >= currentPlaylist.length) nextIndex = 0;
+                    playFromPlaylistByIndex(nextIndex);
+                } else {
+                    if (currentQueue.length === 0) return;
+                    let nextIndex = currentSongIndex + 1;
+                    if (nextIndex >= currentQueue.length) nextIndex = 0;
+                    playFromQueueByIndex(nextIndex);
+                }
             };
             
             const playPrev = () => {
-                if (currentQueue.length === 0) return;
-                let prevIndex = currentSongIndex - 1;
-                if (prevIndex < 0) prevIndex = currentQueue.length - 1;
-                playSongByIndex(prevIndex);
+                if (isPlayingFromPlaylist) {
+                    if (currentPlaylist.length === 0) return;
+                    let prevIndex = currentSongIndex - 1;
+                    if (prevIndex < 0) prevIndex = currentPlaylist.length - 1;
+                    playFromPlaylistByIndex(prevIndex);
+                } else {
+                    if (currentQueue.length === 0) return;
+                    let prevIndex = currentSongIndex - 1;
+                    if (prevIndex < 0) prevIndex = currentQueue.length - 1;
+                    playFromQueueByIndex(prevIndex);
+                }
             };
 
             // --- Event Handlers ---
@@ -354,28 +364,28 @@
                 }
             };
 
-            const handlePlayFromPlaylist = async (songName) => {
-                await api.addSong(songName);
-                await refreshQueue();
-                playSongByIndex(currentQueue.length - 1);
-                closePlaylistModal();
-            };
-
             const handleRemoveSong = async (songId) => {
+                const songIndex = currentQueue.findIndex(s => s.id === songId);
                 await api.removeSong(songId);
-                if (currentSongIndex !== -1 && currentQueue[currentSongIndex]?.id === songId) {
-                    audioPlayer.pause();
-                    audioPlayer.src = '';
-                    updateNowPlayingUI(null);
-                }
                 await refreshQueue();
+                if (!isPlayingFromPlaylist && songIndex === currentSongIndex) {
+                    if (currentQueue.length > 0) {
+                        playFromQueueByIndex(currentSongIndex % currentQueue.length);
+                    } else {
+                        audioPlayer.pause();
+                        audioPlayer.src = '';
+                        updateNowPlayingUI(null);
+                    }
+                }
             };
             
             const handleClearQueue = async () => {
                 await api.clearQueue();
-                audioPlayer.pause();
-                audioPlayer.src = '';
-                updateNowPlayingUI(null);
+                if (!isPlayingFromPlaylist) {
+                    audioPlayer.pause();
+                    audioPlayer.src = '';
+                    updateNowPlayingUI(null);
+                }
                 await refreshQueue();
             };
             
@@ -384,12 +394,10 @@
                 modal.classList.remove('hidden');
                 requestAnimationFrame(() => content.classList.remove('translate-y-full'));
             };
-
             const closeModal = (modal, content) => {
                 content.classList.add('translate-y-full');
                 setTimeout(() => modal.classList.add('hidden'), 300);
             };
-
             const openQueueModal = () => openModal(queueModal, queueModalContent);
             const closeQueueModal = () => closeModal(queueModal, queueModalContent);
             const openPlaylistModal = () => openModal(playlistModal, playlistModalContent);
@@ -397,14 +405,8 @@
 
             // --- Initialization ---
             const refreshQueue = async () => {
-                const lastPlayingId = currentSongIndex > -1 ? currentQueue[currentSongIndex]?.id : null;
                 const queueData = await api.getQueue();
                 currentQueue = queueData.queue || [];
-                currentSongIndex = lastPlayingId ? currentQueue.findIndex(song => song.id === lastPlayingId) : -1;
-                if (!isPlaying && currentSongIndex === -1) {
-                    updateNowPlayingUI(null);
-                    playPauseIcon.className = 'fas fa-play';
-                }
                 renderQueue();
             };
 
@@ -415,8 +417,8 @@
             };
             
             const initSortable = () => {
-                if (sortableInstance) sortableInstance.destroy();
-                sortableInstance = new Sortable(queueListEl, {
+                if (sortableQueueInstance) sortableQueueInstance.destroy();
+                sortableQueueInstance = new Sortable(queueListEl, {
                     animation: 150,
                     ghostClass: 'sortable-ghost',
                     chosenClass: 'sortable-chosen',
@@ -426,11 +428,27 @@
                         await refreshQueue();
                     },
                 });
+
+                if (sortablePlaylistInstance) sortablePlaylistInstance.destroy();
+                sortablePlaylistInstance = new Sortable(playlistListEl, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: (evt) => {
+                        const reorderedPlaylist = [];
+                        playlistListEl.querySelectorAll('[data-song-name]').forEach(el => {
+                            const song = currentPlaylist.find(s => s.name === el.dataset.songName);
+                            if(song) reorderedPlaylist.push(song);
+                        });
+                        currentPlaylist = reorderedPlaylist;
+                        renderPlaylist(); // Re-render to update indices
+                    },
+                });
             };
 
             const init = async () => {
-                audioPlayer.addEventListener('play', () => { isPlaying = true; playPauseIcon.className = 'fas fa-pause'; renderQueue(); });
-                audioPlayer.addEventListener('pause', () => { isPlaying = false; playPauseIcon.className = 'fas fa-play'; renderQueue(); });
+                audioPlayer.addEventListener('play', () => { isPlaying = true; playPauseIcon.className = 'fas fa-pause'; isPlayingFromPlaylist ? renderPlaylist() : renderQueue(); });
+                audioPlayer.addEventListener('pause', () => { isPlaying = false; playPauseIcon.className = 'fas fa-play'; isPlayingFromPlaylist ? renderPlaylist() : renderQueue(); });
                 audioPlayer.addEventListener('ended', playNext);
                 audioPlayer.addEventListener('timeupdate', () => {
                     if (audioPlayer.duration) {
@@ -446,7 +464,6 @@
                 addSongForm.addEventListener('submit', handleAddSong);
                 clearQueueBtn.addEventListener('click', handleClearQueue);
                 
-                // Modal Listeners
                 queueToggleBtn.addEventListener('click', openQueueModal);
                 closeQueueBtn.addEventListener('click', closeQueueModal);
                 queueModal.addEventListener('click', (e) => { if (e.target === queueModal) closeQueueModal(); });
@@ -455,7 +472,6 @@
                 closePlaylistBtn.addEventListener('click', closePlaylistModal);
                 playlistModal.addEventListener('click', (e) => { if (e.target === playlistModal) closePlaylistModal(); });
 
-                // FIX: Add stopPropagation to the progress bar click handler
                 progressBarContainer.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (audioPlayer.duration) {
