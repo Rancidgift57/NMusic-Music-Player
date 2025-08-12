@@ -420,6 +420,7 @@
                 if (sortableQueueInstance) sortableQueueInstance.destroy();
                 sortableQueueInstance = new Sortable(queueListEl, {
                     animation: 150,
+                    delay:200,
                     ghostClass: 'sortable-ghost',
                     chosenClass: 'sortable-chosen',
                     onEnd: async (evt) => {
@@ -432,6 +433,7 @@
                 if (sortablePlaylistInstance) sortablePlaylistInstance.destroy();
                 sortablePlaylistInstance = new Sortable(playlistListEl, {
                     animation: 150,
+                    delay:200,
                     ghostClass: 'sortable-ghost',
                     chosenClass: 'sortable-chosen',
                     onEnd: (evt) => {
