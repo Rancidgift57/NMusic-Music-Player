@@ -3,7 +3,7 @@ name: API Pinger
 on:
   schedule:
     # Runs every 13 minutes. The script itself will add a random delay.
-    - cron: '*/13 * * * *'
+    - cron: '*0 */2 * * *'
   workflow_dispatch:
     # Allows you to run this workflow manually from the Actions tab
 
